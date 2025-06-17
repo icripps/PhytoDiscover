@@ -138,3 +138,11 @@ python library_search.py -f <MZML_FILE> -i <QUERY_ID> [-o <OUTPUT_CSV>]
 - **Automate with Scripts:** Use shell scripts (like Bash) to loop through all MS2 spectra in a file and run `library_search.py` on each one, creating a comprehensive analysis of your entire sample.
 - **Interpret Scores:** A score of `> 0.9` is a very high-confidence match. A score between `0.7 - 0.85` could indicate a structurally similar but novel compound—a potential discovery!
 
+
+---
+
+### Background and Inspiration
+
+This project was inspired by the principles outlined in the work on **DreaMS (Deep Representations Empowering the Annotation of Mass Spectra)**. The core concept is that molecules can be identified and compared based on their unique mass spectral "fingerprints."
+
+While PhytoDiscover does not implement the same self-supervised AI model, it applies the foundational idea of spectral similarity searching to create a practical, library-based framework for identifying known compounds and discovering novel, structurally related molecules in complex natural samples.
