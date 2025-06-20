@@ -146,3 +146,38 @@ python library_search.py -f <MZML_FILE> -i <QUERY_ID> [-o <OUTPUT_CSV>]
 This project was inspired by the principles outlined in the work on **DreaMS (Deep Representations Empowering the Annotation of Mass Spectra)**. The core concept is that molecules can be identified and compared based on their unique mass spectral "fingerprints."
 
 While PhytoDiscover does not implement the same self-supervised AI model, it applies the foundational idea of spectral similarity searching to create a practical, library-based framework for identifying known compounds and discovering novel, structurally related molecules in complex natural samples.
+
+## V2: Advanced Analysis and Visualization
+
+The framework has been updated with a more powerful, consolidated workflow for batch analysis and result visualization.
+
+### 1. Run a Full Analysis
+
+The `run_full_analysis.py` script is now the primary tool for analysis. It performs the following steps in a single execution:
+
+1.  Builds an in-memory reference library (containing a reference peptide and LSD).
+2.  Processes all MS/MS spectra from a given `.mzML` file.
+3.  Compares every query spectrum against every reference spectrum.
+4.  Generates a `final_analysis_report.csv` file with all matches that meet a minimum similarity score.
+
+**Usage:**
+
+```bash
+python run_full_analysis.py --mzml_file /path/to/your/data.mzML --output_csv report.csv
+```
+
+### 2. Visualize a Spectral Match
+
+After identifying a high-scoring match in the report, you can visually confirm it using the `visualize_match.py` script. This tool generates a mirror plot comparing the query and reference spectra.
+
+**Usage:**
+
+```bash
+python visualize_match.py --mzml_file /path/to/your/data.mzML --query_id <ID_FROM_REPORT> --reference_name <NAME_FROM_REPORT> --output plot.png
+```
+
+*   `--query_id`: The ID of the spectrum from your data file (e.g., `5`).
+*   `--reference_name`: The name of the reference compound (e.g., `Reference_Peptide_725` or `LSD`).
+
+This will save a high-quality PNG image of the mirror plot, allowing for direct visual confirmation of the match.
+
