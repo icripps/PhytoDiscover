@@ -1,5 +1,4 @@
 fastapi
-matchms
-numpy
-pymzml
 uvicorn[standard]
+numpy
+matchms
