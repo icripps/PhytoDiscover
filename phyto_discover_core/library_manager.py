@@ -1,59 +1,50 @@
 import sqlite3
-import numpy as np
-import io
+import os
+from pyteomics import mass
 
-def adapt_array(arr):
-    out = io.BytesIO()
-    np.save(out, arr)
-    out.seek(0)
-    return sqlite3.Binary(out.read())
-
-def convert_array(text):
-    out = io.BytesIO(text)
-    out.seek(0)
-    return np.load(out)
-
-sqlite3.register_adapter(np.ndarray, adapt_array)
-sqlite3.register_converter("array", convert_array)
-
-def create_database(db_path='phytodiscover_core.db'):
-    conn = sqlite3.connect(db_path, detect_types=sqlite3.PARSE_DECLTYPES)
+def build_database(db_path):
+    """Creates the SQLite database and the compounds table."""
+    if os.path.exists(db_path):
+        os.remove(db_path)
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
-    cursor.execute("DROP TABLE IF EXISTS spectra")
     cursor.execute('''
-        CREATE TABLE spectra (
-            id INTEGER PRIMARY KEY,
-            compound_name TEXT NOT NULL UNIQUE,
-            precursor_mz REAL NOT NULL,
-            embedding array
+        CREATE TABLE compounds (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            formula TEXT NOT NULL,
+            mass REAL NOT NULL
         )
     ''')
     conn.commit()
     conn.close()
-    print(f"Database '{db_path}' created successfully with 'spectra' table.")
+    print(f"Database with 'compounds' table created at {db_path}")
 
-def add_spectrum(db_path, compound_name, precursor_mz, embedding):
-    conn = sqlite3.connect(db_path, detect_types=sqlite3.PARSE_DECLTYPES)
-    cursor = conn.cursor()
+def add_compound_to_db(db_path, name, formula):
+    """Calculates the mass of a compound and adds it to the database."""
     try:
-        cursor.execute("INSERT INTO spectra (compound_name, precursor_mz, embedding) VALUES (?, ?, ?)",
-                       (compound_name, precursor_mz, embedding))
+        # Calculate the monoisotopic mass
+        compound_mass = mass.calculate_mass(formula=formula)
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO compounds (name, formula, mass) VALUES (?, ?, ?)",
+            (name, formula, compound_mass)
+        )
         conn.commit()
-        print(f"Added '{compound_name}' to the library.")
-    except sqlite3.IntegrityError:
-        print(f"Compound '{compound_name}' already exists in the library. Skipping.")
-    finally:
         conn.close()
+        print(f"Added {name} (Mass: {compound_mass}) to the database.")
+        return True
+    except Exception as e:
+        print(f"Error adding {name} to database: {e}")
+        return False
 
 if __name__ == '__main__':
-    DB_FILE = 'phytodiscover_core.db'
-    print("Initializing database and library...")
-    create_database(DB_FILE)
-    
-    # Add some example compounds
-    add_spectrum(DB_FILE, 'Caffeine', 194.08, np.random.rand(1, 1024).astype(np.float32))
-    add_spectrum(DB_FILE, 'Aspirin', 180.04, np.random.rand(1, 1024).astype(np.float32))
-    add_spectrum(DB_FILE, 'Metformin', 129.1, np.random.rand(1, 1024).astype(np.float32))
-    add_spectrum(DB_FILE, 'LSD', 323.19, np.random.rand(1, 1024).astype(np.float32))
-    
-    print("Library setup complete.")
+    # Example usage: create and populate the database
+    DB_FILE = '../data/phyto_discover_core.db'
+    os.makedirs('../data', exist_ok=True)
+    build_database(DB_FILE)
+    add_compound_to_db(DB_FILE, 'Aspirin', 'C9H8O4')
+    add_compound_to_db(DB_FILE, 'Metformin', 'C4H11N5')
+    add_compound_to_db(DB_FILE, 'Caffeine', 'C8H10N4O2')
+    print("\nLibrary manager script executed successfully.")
