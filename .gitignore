@@ -26,3 +26,4 @@ package-lock.json
 
 # Logs
 *.log
+\n# Data files\n*.mgf
