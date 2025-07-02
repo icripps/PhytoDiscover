@@ -1,4 +1,3 @@
-
 # Python
 __pycache__/
 *.pyc
@@ -26,4 +25,6 @@ package-lock.json
 
 # Logs
 *.log
-\n# Data files\n*.mgf
+
+# Data files
+*.mgf
