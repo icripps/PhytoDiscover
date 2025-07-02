@@ -1,3 +1,11 @@
+# SQLite databases
 *.db
-phyto_discover_clinical/
+
+# Python virtual environment
+venv/
 __pycache__/
+*.pyc
+
+# Node.js dependencies
+/webapp/frontend/node_modules
+.next/
