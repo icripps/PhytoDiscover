@@ -181,3 +181,57 @@ python visualize_match.py --mzml_file /path/to/your/data.mzML --query_id <ID_FRO
 
 This will save a high-quality PNG image of the mirror plot, allowing for direct visual confirmation of the match.
 
+
+---
+
+# V3: Full-Stack Web Application
+
+The project has evolved into a full-stack web application for a more user-friendly and interactive experience.
+
+## How to Run the Application
+
+It is highly recommended to use a virtual environment for the Python backend.
+
+### 1. Backend Setup (Run this first!)
+
+```bash
+# Navigate to the backend directory
+cd PhytoDiscover/webapp/backend
+
+# Create and activate a virtual environment (if you haven't already)
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install Python dependencies
+pip install -r requirements.txt
+
+# Start the backend server
+uvicorn main:app --reload --port 8001
+```
+
+The backend API will now be running at `http://localhost:8001`.
+
+### 2. Frontend Setup
+
+Open a **new terminal window** for this step.
+
+```bash
+# Navigate to the frontend directory
+cd PhytoDiscover/webapp/frontend
+
+# Install Node.js dependencies
+npm install
+
+# Start the frontend development server
+npm run dev
+```
+
+The web application will now be accessible at `http://localhost:3000`.
+
+## How to Use the Web App
+
+1.  **Open your browser** and navigate to `http://localhost:3000`.
+2.  **Select an Analysis Module:** Use the radio buttons to choose between "Clinical Diagnostics" or "Food Safety".
+3.  **Enter a Compound Name:** Type the name of a compound you want to search for (e.g., `Aspirin` for Clinical, or `Glyphosate` for Food Safety).
+4.  **Select a Sample File:** The dropdown menu will be automatically populated with available `.mzML` files from the `/data` directory.
+5.  **Click Search:** The results from the analysis will appear below the form.
