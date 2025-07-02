@@ -1,117 +1,101 @@
-import sys
-import os
-import sqlite3
-from fastapi import FastAPI, HTTPException, Query
-from pydantic import BaseModel
+
+import uvicorn
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-
-# --- Path Setup ---
-# Add project root to the Python path
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-sys.path.append(project_root)
-
-# --- Core PhytoDiscover Imports ---
-from phyto_discover_core import core_search, library_manager
+from pydantic import BaseModel
+import sqlite3
+import numpy as np
+import os
 
 app = FastAPI()
 
 # --- CORS Middleware ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Allow frontend access
+    allow_origins=["*"],  # Allows all origins
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
 )
 
-# --- Data Models ---
-class SearchRequest(BaseModel):
+# --- Pydantic Models ---
+class SearchQuery(BaseModel):
+    module: str
     compound_name: str
 
-class SearchResult(BaseModel):
-    query_id: str
-    match_id: str
-    score: float
-    mz_query: float
-    mz_match: float
+# --- Database Paths ---
+DB_PATHS = {
+    "Clinical Diagnostics": "clinical_library.db",
+    "Food Safety": "food_safety_library.db",
+    "Forensic Toxicology": "forensic_library.db"
+}
 
-class ClinicalSearchResult(BaseModel):
-    name: str
-    precursor_mz: float
+# --- Helper Functions ---
+def get_db_connection(module: str):
+    db_file = DB_PATHS.get(module)
+    if not db_file:
+        raise HTTPException(status_code=404, detail="Module not found")
 
-# --- Database and File Paths ---
-DB_PATH = os.path.join(project_root, 'data', 'phyto_discover_core.db')
-DATA_FILE_PATH = os.path.join(project_root, 'data', 'small.pwiz.1.1.mzML')
-CLINICAL_DB_PATH = os.path.join(project_root, 'phyto_discover_clinical', 'data', 'clinical_knowledge_base.db')
+    db_path = os.path.join(os.path.dirname(__file__), db_file)
+    if not os.path.exists(db_path):
+        raise HTTPException(status_code=500, detail=f"Database file not found for module: {module}")
 
-# --- Startup Event ---
-@app.on_event("startup")
-def startup_event():
-    # Ensure the original database exists
-    if not os.path.exists(DB_PATH):
-        print(f"Database not found at {DB_PATH}. Creating...")
-        library_manager.build_database(DB_PATH)
-        library_manager.add_compound_to_db(DB_PATH, 'Aspirin', 'C9H8O4')
-        print("Database created.")
-    else:
-        print(f"Original database found at {DB_PATH}.")
-    
-    # Check for the clinical database
-    if not os.path.exists(CLINICAL_DB_PATH):
-        print(f"CRITICAL: Clinical database not found at {CLINICAL_DB_PATH}. The /api/clinical_search endpoint will fail.")
-    else:
-        print(f"Clinical database found at {CLINICAL_DB_PATH}.")
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    return conn
 
-# --- NEW: Clinical Search Logic ---
-def search_clinical_db_by_mz(query_mz: float, tolerance: float):
-    """Searches the clinical database for a precursor m/z within a given tolerance."""
-    conn = sqlite3.connect(CLINICAL_DB_PATH)
-    cursor = conn.cursor()
-    min_mz = query_mz - tolerance
-    max_mz = query_mz + tolerance
-    cursor.execute(
-        "SELECT name, precursor_mz FROM spectra WHERE precursor_mz BETWEEN ? AND ?",
-        (min_mz, max_mz)
-    )
-    results = cursor.fetchall()
-    conn.close()
-    # Convert list of tuples to list of dicts to match Pydantic model
-    return [{"name": row[0], "precursor_mz": row[1]} for row in results]
+def cosine_similarity(a, b):
+    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
 # --- API Endpoints ---
-
-@app.get("/api/hello")
+@app.get("/")
 def read_root():
-    return {"message": "Hello from the PhytoDiscover Backend!"}
+    return {"message": "PhytoDiscover Backend is running"}
 
-@app.post("/api/search", response_model=list[SearchResult])
-def search_compound(request: SearchRequest):
-    print(f"Received original search request for: {request.compound_name}")
+@app.post("/search")
+def search_spectra(query: SearchQuery):
+    conn = None
     try:
-        results_df = core_search.search_for_compound(
-            db_path=DB_PATH,
-            compound_name=request.compound_name,
-            mzml_file=DATA_FILE_PATH,
-            tolerance=0.1
-        )
-        if results_df is None or results_df.empty:
-            return []
-        results_list = results_df.to_dict(orient='records')
-        return [SearchResult(**item) for item in results_list]
-    except Exception as e:
-        print(f"An error occurred during original search: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        # 1. Get reference embedding from the selected library
+        conn = get_db_connection(query.module)
+        cursor = conn.cursor()
+        cursor.execute("SELECT embedding FROM spectra WHERE name = ?", (query.compound_name,))
+        ref_row = cursor.fetchone()
+        if not ref_row:
+            raise HTTPException(status_code=404, detail=f"Compound '{query.compound_name}' not found in {query.module} library.")
 
-@app.get("/api/clinical_search", response_model=list[ClinicalSearchResult])
-def search_clinical(
-    mz: float = Query(..., description="The query m/z value to search for."),
-    tolerance: float = Query(0.1, description="The search tolerance (+/-).")
-):
-    print(f"Received clinical search for m/z: {mz} +/- {tolerance}")
-    try:
-        matches = search_clinical_db_by_mz(query_mz=mz, tolerance=tolerance)
-        return matches
-    except Exception as e:
-        print(f"An error occurred during clinical search: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        ref_embedding = np.frombuffer(ref_row['embedding'], dtype=np.float32)
+
+        # 2. Get all embeddings from the same library to search against
+        cursor.execute("SELECT id, name, precursor_mz, embedding FROM spectra")
+        all_spectra = cursor.fetchall()
+
+        # 3. Calculate similarities
+        results = []
+        for spectrum in all_spectra:
+            target_embedding = np.frombuffer(spectrum['embedding'], dtype=np.float32)
+            score = cosine_similarity(ref_embedding, target_embedding)
+
+            # Add to results if score is high enough (e.g., > 0.7)
+            if score > 0.7:
+                results.append({
+                    "id": spectrum['id'],
+                    "name": spectrum['name'],
+                    "mz": spectrum['precursor_mz'],
+                    "score": score
+                })
+
+        # 4. Sort results by score (descending)
+        sorted_results = sorted(results, key=lambda x: x['score'], reverse=True)
+
+        return {"results": sorted_results[:10]} # Return top 10 matches
+
+    except sqlite3.Error as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {e}")
+    finally:
+        if conn:
+            conn.close()
+
+if __name__ == '__main__':
+    uvicorn.run(app, host='0.0.0.0', port=8001)
 

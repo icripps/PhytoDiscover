@@ -1,51 +1,43 @@
+
 'use client';
 
 import { useState } from 'react';
 
-interface Match {
-  compound_name: string;
-  precursor_mz: number;
+interface SearchResult {
+  id: number;
+  name: string;
+  mz: number;
   score: number;
 }
 
-interface SearchResult {
-  query: {
-    compound_name: string;
-    precursor_mz: number;
-  };
-  matches: Match[];
-  error?: string;
-}
-
 export default function Home() {
-  const [compoundName, setCompoundName] = useState('Caffeine');
-  const [filePath, setFilePath] = useState('data/example_data.mzML');
-  const [results, setResults] = useState<SearchResult | null>(null);
+  const [module, setModule] = useState('Clinical Diagnostics');
+  const [compoundName, setCompoundName] = useState('');
+  const [results, setResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSearch = async () => {
-    if (!compoundName || !filePath) {
-      setError('Please provide both a compound name and a file path.');
-      return;
-    }
     setIsLoading(true);
     setError(null);
-    setResults(null);
+    setResults([]);
 
     try {
-      const response = await fetch(`http://localhost:8001/api/search?compound_name=${encodeURIComponent(compoundName)}&file_path=${encodeURIComponent(filePath)}`);
-      const data = await response.json();
+      const response = await fetch('http://localhost:8001/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ module, compound_name: compoundName }),
+      });
 
       if (!response.ok) {
-        throw new Error(data.detail || 'An unknown error occurred.');
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'An unknown error occurred');
       }
 
-      if (data.error) {
-        throw new Error(data.error);
-      }
-      
-      setResults(data);
+      const data = await response.json();
+      setResults(data.results);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -54,48 +46,47 @@ export default function Home() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center p-12 bg-gray-50 font-sans">
-      <div className="w-full max-w-5xl text-center mb-12">
-        <h1 className="text-5xl font-bold text-gray-800">PhytoDiscover</h1>
-        <p className="mt-2 text-lg text-gray-600">AI-Powered Phytochemical Analysis</p>
+    <main className="flex min-h-screen flex-col items-center justify-start p-12 bg-gray-50">
+      <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
+        <h1 className="text-4xl font-bold text-gray-800 mb-8 text-center w-full">PhytoDiscover</h1>
       </div>
 
-      <div className="w-full max-w-2xl bg-white p-8 rounded-lg shadow-lg">
-        <div className="space-y-6">
-          <div>
-            <label htmlFor="compound" className="block text-sm font-medium text-gray-700 mb-1">
-              Compound Name
+      <div className="w-full max-w-2xl bg-white p-8 rounded-lg shadow-md">
+        <div className="mb-6">
+          <label className="block text-gray-700 text-sm font-bold mb-2">1. Select Analysis Module</label>
+          <div className="flex flex-col space-y-2">
+            <label className="inline-flex items-center">
+              <input type="radio" className="form-radio" name="module" value="Clinical Diagnostics" checked={module === 'Clinical Diagnostics'} onChange={(e) => setModule(e.target.value)} />
+              <span className="ml-2">Clinical Diagnostics</span>
             </label>
-            <input
-              type="text"
-              id="compound"
-              value={compoundName}
-              onChange={(e) => setCompoundName(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
-              placeholder="e.g., Caffeine"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="filepath" className="block text-sm font-medium text-gray-700 mb-1">
-              Data File Path (relative to project root)
+            <label className="inline-flex items-center">
+              <input type="radio" className="form-radio" name="module" value="Food Safety" checked={module === 'Food Safety'} onChange={(e) => setModule(e.target.value)} />
+              <span className="ml-2">Food Safety</span>
             </label>
-            <input
-              type="text"
-              id="filepath"
-              value={filePath}
-              onChange={(e) => setFilePath(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
-              placeholder="e.g., data/example_data.mzML"
-            />
+            <label className="inline-flex items-center">
+              <input type="radio" className="form-radio" name="module" value="Forensic Toxicology" checked={module === 'Forensic Toxicology'} onChange={(e) => setModule(e.target.value)} />
+              <span className="ml-2">Forensic Toxicology</span>
+            </label>
           </div>
         </div>
 
-        <div className="mt-8">
+        <div className="mb-6">
+          <label htmlFor="compoundName" className="block text-gray-700 text-sm font-bold mb-2">2. Enter Compound Name</label>
+          <input
+            id="compoundName"
+            type="text"
+            value={compoundName}
+            onChange={(e) => setCompoundName(e.target.value)}
+            placeholder="e.g., Aspirin, Caffeine..."
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          />
+        </div>
+
+        <div className="flex items-center justify-center">
           <button
             onClick={handleSearch}
-            disabled={isLoading}
-            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            disabled={isLoading || !compoundName}
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline disabled:bg-gray-400"
           >
             {isLoading ? 'Searching...' : 'Search'}
           </button>
@@ -103,40 +94,36 @@ export default function Home() {
       </div>
 
       {error && (
-        <div className="mt-6 w-full max-w-2xl p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">
-          <p><strong>Error:</strong> {error}</p>
+        <div className="mt-8 w-full max-w-2xl bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+          <strong className="font-bold">Error: </strong>
+          <span className="block sm:inline">{error}</span>
         </div>
       )}
 
-      {results && (
+      {results.length > 0 && (
         <div className="mt-8 w-full max-w-4xl">
-          <h2 className="text-2xl font-semibold text-gray-700 text-center">Search Results</h2>
-          <div className="mt-4 bg-white shadow-lg rounded-lg overflow-hidden">
-            <div className="p-6 border-b bg-gray-50">
-              <h3 className="text-lg font-medium text-gray-900">Query Spectrum</h3>
-              <p className="text-sm text-gray-600">Compound: <span className="font-semibold">{results.query.compound_name}</span></p>
-              <p className="text-sm text-gray-600">Precursor m/z: <span className="font-semibold">{results.query.precursor_mz?.toFixed(4)}</span></p>
-            </div>
-            <div className="p-6">
-              <h3 className="text-lg font-medium text-gray-900">Best Match</h3>
-              {results.matches.length > 0 ? (
-                <ul className="divide-y divide-gray-200">
-                  {results.matches.map((match, index) => (
-                    <li key={index} className="py-4 flex justify-between items-center">
-                      <div>
-                        <p className="text-md font-semibold text-indigo-600">{match.compound_name}</p>
-                        <p className="text-sm text-gray-500">Library m/z: {match.precursor_mz.toFixed(4)}</p>
-                      </div>
-                      <span className={`px-3 py-1 text-sm font-semibold rounded-full ${match.score > 0.8 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                        Score: {match.score.toFixed(4)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="mt-2 text-gray-500">No matches found in the library.</p>
-              )}
-            </div>
+          <h2 className="text-2xl font-semibold text-gray-800 mb-4">Search Results</h2>
+          <div className="overflow-x-auto bg-white rounded-lg shadow">
+            <table className="min-w-full leading-normal">
+              <thead>
+                <tr>
+                  <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">ID</th>
+                  <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Compound Name</th>
+                  <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">m/z</th>
+                  <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Similarity Score</th>
+                </tr>
+              </thead>
+              <tbody>
+                {results.map((result) => (
+                  <tr key={result.id}>
+                    <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{result.id}</td>
+                    <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{result.name}</td>
+                    <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{result.mz.toFixed(4)}</td>
+                    <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{result.score.toFixed(4)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
