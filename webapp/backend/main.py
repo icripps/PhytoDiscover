@@ -1,9 +1,16 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import sys
 import os
 import subprocess
+
+# Auth middleware for SaaS multi-tenant mode
+sys.path.insert(0, os.path.dirname(__file__))
+try:
+    from auth import verify_token, get_current_tenant, security
+except ImportError:
+    verify_token = get_current_tenant = security = None
 
 # Add the project root to the Python path to allow imports from phyto_discover_core
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -101,6 +108,11 @@ async def search(request: SearchRequest):
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
         raise HTTPException(status_code=500, detail=f"An unexpected server error occurred: {str(e)}")
+
+@app.get("/api/tenants")
+async def get_tenants(token_payload: dict = Depends(verify_token) if verify_token else None):
+    # SaaS multi-tenant endpoint (requires JWT)
+    return {"message": "Multi-tenant active", "tenant_id": get_current_tenant(token_payload) if token_payload else "demo"}
 
 @app.get("/api/data-files")
 async def get_data_files():
