@@ -42,6 +42,8 @@ def get_db_path(module: str):
         db_filename = "food_safety_library.db"
     elif module == "Forensic Toxicology":
         db_filename = "forensic_library.db"
+    elif module == "Plant / Botanical":
+        db_filename = "plant_library.db"
     else:
         return None
     return os.path.join(project_root, 'data', db_filename)

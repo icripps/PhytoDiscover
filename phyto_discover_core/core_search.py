@@ -96,3 +96,16 @@ def run_search(compound_name, mzml_file_path, db_path='phytodiscover_core.db'):
         },
         "matches": results
     }
+
+if __name__ == '__main__':
+    import argparse, json
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--db_path', default='phytodiscover_core.db')
+    parser.add_argument('--mzml_file', default='small.pwiz.1.1.mzML')
+    parser.add_argument('--compound_name', default='Quercetin')
+    args = parser.parse_args()
+    result = run_search(args.compound_name, args.mzml_file, args.db_path)
+    # Format matches to match frontend expectations
+    matches = result.get("matches", [])
+    formatted = [{"id": idx+1, "name": m.get("compound_name"), "mz": m.get("precursor_mz"), "score": m.get("score")} for idx, m in enumerate(matches)]
+    print(json.dumps({"results": formatted}))

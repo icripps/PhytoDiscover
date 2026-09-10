@@ -108,6 +108,10 @@ export default function Home() {
                 <input type="radio" name="module" value="Forensic Toxicology" checked={module === 'Forensic Toxicology'} onChange={(e) => setModule(e.target.value)} className="form-radio h-4 w-4 text-indigo-600" />
                 <span className="ml-2 text-gray-700">Forensic Toxicology</span>
               </label>
+              <label className="flex items-center">
+                <input type="radio" name="module" value="Plant / Botanical" checked={module === 'Plant / Botanical'} onChange={(e) => setModule(e.target.value)} className="form-radio h-4 w-4 text-indigo-600" />
+                <span className="ml-2 text-gray-700">Plant / Botanical</span>
+              </label>
             </div>
           </div>
 
