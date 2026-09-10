@@ -12,6 +12,13 @@ try:
 except ImportError:
     verify_token = get_current_tenant = security = None
 
+# Production: use supabase-py auth when SUPABASE_URL / SERVICE_ROLE_KEY set
+# See auth_supabase.py for live DB verification path
+try:
+    from auth import verify_token, get_current_tenant, security
+except ImportError:
+    verify_token = get_current_tenant = security = None
+
 # Add the project root to the Python path to allow imports from phyto_discover_core
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 core_path = os.path.join(project_root, 'phyto_discover_core')
