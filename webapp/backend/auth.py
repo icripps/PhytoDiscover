@@ -5,7 +5,14 @@ import os, jwt
 from fastapi import HTTPException, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-SECRET = os.getenv("PHYTO_JWT_SECRET", "dev-secret-change-in-prod")
+# Auth middleware for SaaS multi-tenant mode
+# Production swap: replace JWT secret with supabase-py auth.getUser()
+# Once connected to Supabase DB via cli/connection, use:
+#   from supabase import create_client
+#   supabase = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_SERVICE_ROLE_KEY"))
+#   user = supabase.auth.get_user(token)
+
+secret = os.getenv("PHYTO_JWT_SECRET", "dev-secret-change-in-prod")
 security = HTTPBearer(auto_error=False)
 
 def verify_token(credentials: HTTPAuthorizationCredentials = None):
