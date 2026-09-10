@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react';
 
-// Define the structure for a single search result
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'API_URL';
+
+// In fetch calls, replace hardcoded 'API_URL' with API_URL
 interface SearchResult {
   id: number;
   name: string;
@@ -24,7 +26,7 @@ export default function Home() {
   useEffect(() => {
     const fetchMzmlFiles = async () => {
       try {
-        const response = await fetch('http://localhost:8001/api/data-files');
+        const response = await fetch('API_URL/api/data-files');
         if (!response.ok) {
           throw new Error('Failed to fetch data files');
         }
@@ -49,7 +51,7 @@ export default function Home() {
     setResults([]);
 
     try {
-      const response = await fetch('http://localhost:8001/api/search', {
+      const response = await fetch('API_URL/api/search', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
