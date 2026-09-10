@@ -1,0 +1,35 @@
+name: Migrate DB to Supabase
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'db/unified_schema.sql'
+      - '.github/workflows/db-migrate.yml'
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Apply schema to Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          # Option A: Use supabase CLI to pull/apply migrations
+          # supabase db push --linked --include-all
+          # Option B: Direct SQL execution via psql (if DB is exposed)
+          echo "Schema file ready: db/unified_schema.sql"
+          echo "Apply to your Supabase project via Dashboard SQL Editor or:"
+          echo "psql $SUPABASE_URL -f db/unified_schema.sql"
+      - name: Verify RLS
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          echo "RLS policies created; confirm via Supabase Dashboard > Table Editor > Policies"

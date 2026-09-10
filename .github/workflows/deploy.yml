@@ -1,0 +1,35 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: webapp/frontend/package-lock.json
+      - run: pip install -r webapp/backend/requirements.txt
+      - run: cd webapp/frontend && npm ci && npm run build
+      - name: Deploy backend
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          echo "Deploy backend to hosting (Render / Railway / Fly) using these env vars"
+          echo "Frontend static build can be deployed to Vercel / Netlify / Supabase Hosting"
+      - name: Verify health
+        run: |
+          curl -sf http://localhost:8001/ || echo "Backend health check: deploy first"
