@@ -4,6 +4,7 @@
 // Dark editorial theme with gold/amber scientific accents
 
 import { useState, useEffect } from 'react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 
 export default function Dashboard() {
   const [metrics, setMetrics] = useState({
@@ -80,6 +81,39 @@ export default function Dashboard() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Interactive Charts */}
+        <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-[#0f1117] border border-amber-500/20 rounded-2xl p-6 shadow-2xl shadow-black/40">
+            <h3 className="font-serif text-xl text-amber-200 mb-2">Spectral Coverage</h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={[{name:'Plant',count:77},{name:'Clinical',count:0},{name:'Food',count:0},{name:'Forensic',count:0}]}>
+                  <XAxis dataKey="name" tick={{fill:'#94a3b8',fontSize:12}} />
+                  <YAxis tick={{fill:'#94a3b8',fontSize:12}} />
+                  <Tooltip contentStyle={{background:'#111827',border:'none',color:'#e8e0d0'}} />
+                  <Bar dataKey="count" radius={[4,4,0,0]}>
+                    <Cell fill="#f59e0b" />
+                    <Cell fill="#475569" />
+                    <Cell fill="#475569" />
+                    <Cell fill="#475569" />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          <div className="bg-[#0f1117] border border-amber-500/20 rounded-2xl p-6 shadow-2xl shadow-black/40">
+            <h3 className="font-serif text-xl text-amber-200 mb-2">Module Status</h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Tooltip contentStyle={{background:'#111827',border:'none',color:'#e8e0d0'}} />
+                  <Pie data={[{name:'Active',value:1},{name:'Locked',value:3}]} cx="50%" cy="50%" innerRadius={40} outerRadius={70} fill="#f59e0b" label={[()=>'Active','Locked']}>{/* simplified */}</Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
 
