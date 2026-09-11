@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import sys
@@ -71,8 +71,12 @@ def read_root():
     return {"message": "PhytoDiscover Backend is running"}
 
 @app.post("/api/search")
-async def search(request: SearchRequest):
-    print(f"Received search request: {request}")
+async def search(request: SearchRequest, authorization: str = Header(None)):
+    # Auth enforced — requires Bearer token (Supabase JWT or dev JWT)
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authorization Bearer token required")
+    # Optional: verify token with Supabase auth here (auth_supabase.py)
+    print(f"Received search request (auth present): {request}")
     db_path = get_db_path(request.module)
     mzml_path = get_mzml_path(request.mzml_file)
 
