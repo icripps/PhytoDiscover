@@ -88,37 +88,12 @@ async def search(request: SearchRequest, authorization: str = Header(None)):
         raise HTTPException(status_code=404, detail=f"Sample data file '{request.mzml_file}' not found.")
 
     try:
-        # Use the system's python interpreter to run the core search script
-        command = [
-            sys.executable,
-            os.path.join(core_path, 'core_search.py'),
-            '--db_path', db_path,
-            '--mzml_file', mzml_path,
-            '--compound_name', request.compound_name
-        ]
-        print(f"Executing command: {' '.join(command)}")
-
-        result = subprocess.run(
-            command,
-            capture_output=True,
-            text=True,
-            check=True,
-            timeout=60 # Add a timeout for safety
-        )
-
-        print("Search script stdout:", result.stdout)
-        print("Search script stderr:", result.stderr)
-
-        # The script is expected to return a JSON string or similar structured text
-        return {"results": result.stdout.strip()}
-
-    except subprocess.CalledProcessError as e:
-        print(f"Error executing search script: {e}")
-        print(f"Stderr: {e.stderr}")
-        raise HTTPException(status_code=500, detail=f"Error during spectral search: {e.stderr}")
+        from search_service import search_live
+        results = search_live(db_path, request.compound_name, mzml_path, request.module)
+        return {"results": results, "db_path": db_path, "engine": "search_service_live"}
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-        raise HTTPException(status_code=500, detail=f"An unexpected server error occurred: {str(e)}")
+        print(f"Search service error: {e}")
+        raise HTTPException(status_code=500, detail=f"Spectral search failed: {str(e)}")
 
 @app.get("/api/tenants")
 async def get_tenants(token_payload: dict = Depends(verify_token) if verify_token else None):
